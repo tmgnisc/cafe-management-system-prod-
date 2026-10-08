@@ -1,0 +1,18 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Pass the Authorization header through (if a proxy adds one)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Serve existing files (uploaded images) directly; route everything else to index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Never execute scripts from the uploads directory
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>
