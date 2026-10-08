@@ -2,7 +2,9 @@
 FROM php:8.2-apache
 
 RUN docker-php-ext-install pdo_mysql \
- && a2enmod rewrite headers \
+ # mod_php requires the prefork MPM — make sure it is the ONLY one enabled
+ && (a2dismod -f mpm_event mpm_worker || true) \
+ && a2enmod mpm_prefork rewrite headers \
  # Serve backend/public as the document root and allow its .htaccess
  && sed -ri 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf \
  && printf '<Directory /var/www/html/public>\n    AllowOverride All\n    Require all granted\n</Directory>\nServerName localhost\n' > /etc/apache2/conf-available/cafe.conf \
