@@ -275,3 +275,11 @@ CREATE TABLE IF NOT EXISTS sessions (
     last_activity  INT UNSIGNED NOT NULL,
     KEY idx_sessions_last_activity (last_activity)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- One-time data seeds already applied (see database/seeds/, run by install.php)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS seed_runs (
+    name    VARCHAR(190) NOT NULL PRIMARY KEY,
+    ran_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

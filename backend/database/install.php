@@ -10,6 +10,9 @@ declare(strict_types=1);
  *   php database/install.php --fresh --demo   # … plus demo tables/menu/inventory/recipes + a demo staff user
  *   php database/install.php --fresh --demo --with-history   # … plus ~3 weeks of order history
  *
+ * Every run also applies pending one-time data seeds from database/seeds/*.php (each runs once
+ * per database, tracked in `seed_runs`) and copies database/seed_images/* into public/uploads/.
+ *
  * The superadmin is created from ADMIN_NAME / ADMIN_EMAIL / ADMIN_PASSWORD.
  * In development they default to admin@ishascozycafe.com / IshaAdmin@2026.
  * In production ADMIN_EMAIL and ADMIN_PASSWORD are required.
@@ -123,6 +126,48 @@ if ($demo) {
 if ($withHistory) {
     require __DIR__ . '/history_seeder.php';
     seed_history();
+}
+
+// ---------------------------------------------------------------- seed images
+// Copied on every run (missing files only) so they survive redeploys and a mounted uploads volume.
+$imageRoot = __DIR__ . '/seed_images';
+$uploadRoot = dirname(__DIR__) . '/public/uploads';
+$copied = 0;
+foreach (glob($imageRoot . '/*/*.{jpg,jpeg,png,webp}', GLOB_BRACE) ?: [] as $src) {
+    $dest = $uploadRoot . substr($src, strlen($imageRoot));
+    if (!is_file($dest)) {
+        if (!is_dir(dirname($dest)) && !mkdir(dirname($dest), 0755, true) && !is_dir(dirname($dest))) {
+            fwrite(STDERR, "  ! cannot create " . dirname($dest) . "\n");
+            continue;
+        }
+        if (copy($src, $dest)) {
+            $copied++;
+        }
+    }
+}
+if ($copied > 0) {
+    echo "  ✓ copied {$copied} seed image(s) to public/uploads\n";
+}
+
+// ---------------------------------------------------------------- one-time data seeds
+$done = $pdo->query('SELECT name FROM seed_runs')->fetchAll(PDO::FETCH_COLUMN);
+foreach (glob(__DIR__ . '/seeds/*.php') ?: [] as $file) {
+    $name = basename($file, '.php');
+    if (in_array($name, $done, true)) {
+        continue;
+    }
+    $seed = require $file;
+    $pdo->beginTransaction();
+    try {
+        $seed($pdo);
+        $pdo->prepare('INSERT INTO seed_runs (name) VALUES (?)')->execute([$name]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        fwrite(STDERR, "  ! seed {$name} failed: {$e->getMessage()}\n");
+        exit(1);
+    }
+    echo "  ✓ seed {$name}\n";
 }
 
 echo "Done.\n";

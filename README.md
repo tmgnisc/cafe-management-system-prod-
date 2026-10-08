@@ -108,7 +108,7 @@ Real environment variables override `.env` values.
 # no users yet — the single SUPERADMIN (from ADMIN_EMAIL / ADMIN_PASSWORD)
 php backend/database/install.php
 
-# Wipe everything and start clean (superadmin only — no tables, menu or orders)
+# Wipe everything and start clean (superadmin + the cafe menu — no tables or orders)
 php backend/database/install.php --fresh
 
 # Development playground: demo tables/menu/inventory/recipes + a demo staff user
@@ -118,6 +118,13 @@ php backend/database/install.php --fresh --demo --with-history
 ```
 
 `--fresh` drops every table in `DB_DATABASE` and refuses to run when `APP_ENV=production` unless `--force` is added.
+
+**One-time data seeds.** Every run also applies any new file in `backend/database/seeds/*.php` exactly once per
+database (recorded in the `seed_runs` table), so a seed pushed to the repo lands on production on the next deploy and
+never again. `2026_10_08_cafe_menu.php` adds the cafe's menu (momo, noodles, laphing, chatpate, drinks, hookah);
+items whose name or SKU already exists are skipped. Their photos live in `backend/database/seed_images/menu/`
+(credits in `CREDITS.md`) and are copied into `public/uploads/menu/` on every run, so they survive redeploys and a
+mounted uploads volume. To add more data later, drop in a new dated seed file — never edit one that has already run.
 
 Prefer importing manually (phpMyAdmin / mysql CLI)? Import `schema.sql`, then `seed_base.sql`
 (and optionally `seed_demo.sql`), then run `php backend/database/install.php` once to create the superadmin.
